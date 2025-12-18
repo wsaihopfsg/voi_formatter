@@ -259,11 +259,13 @@
                 <label style="font-weight: bold; font-size: 0.9rem;">Final Output:</label>
                 <div id="finalOutput" class="io-box" style="color: #0ff;"></div>
             </div>
-
             <div class="panel final-command-box">
                 <h2 style="color: #856404; font-size: 0.8rem; margin-bottom: 5px;">Generated Command String</h2>
                 <div id="hexOutput" class="hex-string"></div>
             </div>
+			<a id="barcodeLink" href="#" target="_blank" style="display: block; text-align: center; background: #008060; color: white; padding: 12px; border-radius: 4px; text-decoration: none; margin-top: 15px; font-weight: bold; font-size: 0.9rem; transition: background 0.2s;">
+                Generate Configuration Barcode &#8599;
+            </a>			
         </div>
     </div>
 
@@ -684,6 +686,13 @@
             const postCursor = inputStr.substring(cursor);
             document.getElementById('visualCursor').innerHTML = 
                 escapeHtml(preCursor) + '<span class="cursor-marker"></span>' + escapeHtml(postCursor);
+			// START: Update Barcode Link
+            const baseUrl = "https://barcode.tec-it.com/en/?data=%5C<FNC3>%40DFMADD069999999999";
+            const linkEl = document.getElementById('barcodeLink');
+            if(linkEl) {
+                linkEl.href = baseUrl + (hexCmd || "");
+            }
+            // END: Update Barcode Link
         }
 
         function escapeHtml(text) {
