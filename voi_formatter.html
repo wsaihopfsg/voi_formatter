@@ -263,10 +263,18 @@
                 <h2 style="color: #856404; font-size: 0.8rem; margin-bottom: 5px;">Generated Command String</h2>
                 <div id="hexOutput" class="hex-string"></div>
             </div>
-			<a id="barcodeLink" href="#" target="_blank" style="display: block; text-align: center; background: #008060; color: white; padding: 12px; border-radius: 4px; text-decoration: none; margin-top: 15px; font-weight: bold; font-size: 0.9rem; transition: background 0.2s;">
-                Generate Configuration Barcode &#8599;
-            </a>			
-        </div>
+			<div style="margin-top: 15px; background: #008060; padding: 10px; border-radius: 4px; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+				<span style="color: white; font-weight: bold; font-size: 0.9rem;">Generate Formatter #</span>
+    
+				<input type="number" id="urlSuffix" value="0" min="0" max="3" oninput="updateSimulation()" 
+				style="width: 40px; padding: 5px; border: none; border-radius: 3px; text-align: center; font-weight: bold; color: #333;">
+    
+				<a id="barcodeLink" href="#" target="_blank" title="Go to Generator" 
+				style="color: white; text-decoration: none; font-weight: bold; font-size: 1.2rem; padding: 0 5px;">
+				&#8599;
+				</a>
+			</div>        
+		</div>
     </div>
 
     <script>
@@ -687,10 +695,11 @@
             document.getElementById('visualCursor').innerHTML = 
                 escapeHtml(preCursor) + '<span class="cursor-marker"></span>' + escapeHtml(postCursor);
 			// START: Update Barcode Link
-            const baseUrl = "https://barcode.tec-it.com/en/?data=%5C<FNC3>%40DFMADD069999999999";
+            const baseUrl = "https://barcode.tec-it.com/en/?data=%5C<FNC3>%40DFMADD"//069999999999";
             const linkEl = document.getElementById('barcodeLink');
+			const suffixVal = document.getElementById('urlSuffix').value || "0"; // Get value from new input
             if(linkEl) {
-                linkEl.href = baseUrl + (hexCmd || "");
+                linkEl.href = baseUrl + suffixVal + "69999999999" + (hexCmd || "");
             }
             // END: Update Barcode Link
         }
