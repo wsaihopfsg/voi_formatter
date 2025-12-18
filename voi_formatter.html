@@ -346,13 +346,14 @@
                 inputs: [{name: 'char', type: 'text', label: 'Remove Char', default: '', maxLength: 1}],
                 desc: 'Removes specific char from output [Source 173]'
             },
-            'BA': {
+			'BA': {
                 name: 'Replace String',
                 inputs: [
+                    {name: 'count', type: 'number', label: 'Count (00=All)', default: 0}, /* Added Count Input */
                     {name: 'find', type: 'text', label: 'Find', default: '23'},
                     {name: 'replace', type: 'text', label: 'Replace With', default: 'ABC'}
                 ],
-                desc: 'Replaces occurrences of string [Source 208]'
+                desc: 'Replaces occurrences of string [Source 484]'
             }
         };
 
@@ -554,20 +555,36 @@
                     if(foundIdx !== -1) cursor = foundIdx; 
                 }
 
-                else if (step.cmdId === 'BA') {
-                     // Syntax BAnnNN1SS1NN2SS2 [Source 209]
-                     // Simplified logic for simulation
+				else if (step.cmdId === 'BA') {
+                     // Syntax BAnnNN1SS1NN2SS2 [Source 484]
+                     // nn: Count (00=All), NN1: Find Len, SS1: Find String, NN2: Repl Len, SS2: Repl String
+                     
+                     const countVal = parseInt(v.count);
+                     const nn = isNaN(countVal) ? 0 : countVal; // Default to 0 (All)
+                     
                      const findLen = v.find.length.toString().padStart(2,'0');
                      const replLen = v.replace.length.toString().padStart(2,'0');
                      
-                     // Assuming nn=00 (replace all)
-                     stepHex += "00" + findLen + strToHex(v.find) + replLen + strToHex(v.replace);
+                     // Generate Hex: nn + len1 + str1 + len2 + str2
+                     stepHex += numToHexByte(nn) + findLen + strToHex(v.find) + replLen + strToHex(v.replace);
+					 // Simulation Logic: BA modifies the FUTURE data (after cursor)
+                     if (v.find.length > 0) {
+                         const preCursor = inputStr.substring(0, cursor);
+                         let postCursor = inputStr.substring(cursor);
 
-                     // Sim (Only affects output, not cursor usually)
-                     // Note: BA acts on Output buffer or Input? Source 216 says "replace... in the output message"
-                     // This is tricky. It usually implies post-processing.
-                     // For this visualizer, we will append a note or try to replace in current output var?
-                     output = output.split(v.find).join(v.replace);
+                         if (nn === 0) {
+                             // If count is 00, replace ALL occurrences in the remaining text
+                             postCursor = postCursor.split(v.find).join(v.replace);
+                         } else {
+                             // If count > 0, replace only the first 'nn' occurrences
+                             for(let i = 0; i < nn; i++) {
+                                 postCursor = postCursor.replace(v.find, v.replace);
+                             }
+                         }
+                         
+                         // Update inputStr so the Visual Cursor updates immediately
+                         inputStr = preCursor + postCursor;
+                     }
                 }
 				else if (step.cmdId === 'EA') {
                     // Move Cursor to End [Source 103]
