@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pepperl+Fuchs Data Formatter GUI</title>
+    <style>
+        :root {
+            --bg-color: #f4f7f6;
+            --panel-bg: #ffffff;
+            --primary: #008060;
+            --accent: #2c3e50;
+            --border: #e1e4e8;
+            --cursor-color: #e74c3c;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg-color);
+            color: #333;
+            height: 100vh;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+        }
+
+        h1 { font-size: 1.2rem; margin-bottom: 10px; color: var(--accent); }
+        h2 { font-size: 1rem; margin-top: 0; color: #666; text-transform: uppercase; letter-spacing: 0.05em; }
+
+        /* Main Grid Layout */
+        .container {
+            display: grid;
+            grid-template-columns: 250px 1fr 300px;
+            gap: 20px;
+            flex: 1;
+            min-height: 0; /* Fix for overflow */
+        }
+
+        /* Common Panel Styles */
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+
+        /* TOOLBOX (Left) */
+        .toolbox-list {
+            overflow-y: auto;
+            flex: 1;
+        }
+        .tool-category {
+            margin-bottom: 15px;
+        }
+        .tool-category-title {
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: #888;
+            margin-bottom: 8px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 4px;
+        }
+        .tool-btn {
+            display: block;
+            width: 100%;
+            text-align: left;
+            padding: 10px;
+            margin-bottom: 5px;
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+        .tool-btn:hover {
+            background: #eef2f5;
+            border-color: var(--primary);
+            transform: translateX(2px);
+        }
+        .tool-code {
+            float: right;
+            font-family: monospace;
+            color: #999;
+            font-size: 0.8em;
+        }
+
+        /* WORKFLOW (Center) */
+        .workflow-area {
+            background: #fafafa;
+            border: 2px dashed #ddd;
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            border-radius: 6px;
+        }
+        .flow-block {
+            background: white;
+            border-left: 4px solid var(--primary);
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            position: relative;
+            animation: slideIn 0.2s ease-out;
+        }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .flow-block-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        .remove-btn {
+            color: #ff6b6b;
+            cursor: pointer;
+            font-size: 1.2rem;
+            line-height: 1;
+        }
+        .flow-inputs {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+        }
+        .input-group label {
+            font-size: 0.75rem;
+            color: #666;
+            margin-bottom: 2px;
+        }
+        .input-group input, .input-group select {
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        
+        /* PREVIEW & OUTPUT (Right) */
+        .test-input-area {
+            margin-bottom: 20px;
+        }
+        .io-box {
+            font-family: 'Courier New', monospace;
+            background: #222;
+            color: #0f0;
+            padding: 10px;
+            border-radius: 4px;
+            min-height: 60px;
+            white-space: pre-wrap;
+            word-break: break-all;
+            margin-top: 5px;
+        }
+        .cursor-marker {
+            display: inline-block;
+            width: 2px;
+            height: 1.2em;
+            background-color: var(--cursor-color);
+            vertical-align: middle;
+            animation: blink 1s infinite;
+        }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        .final-command-box {
+            margin-top: auto;
+            background: #fff3cd;
+            border: 1px solid #ffeeba;
+            color: #856404;
+        }
+        .hex-string {
+            font-family: monospace;
+            word-break: break-all;
+            font-weight: bold;
+        }
+
+    </style>
+</head>
+<body>
+
+    <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <div>
+            <h1>Data Formatter Logic Builder</h1>
+            <small style="color: #666;">Based on VOI1100-F330 Manual (Type 6 Commands)</small>
+        </div>
+        <button onclick="resetAll()" style="padding: 8px 16px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer;">Reset Flow</button>
+    </header>
+
+    <div class="container">
+        <div class="panel">
+            <h2>Command Toolbox</h2>
+            <div class="toolbox-list">
+                
+                <div class="tool-category">
+                    <div class="tool-category-title">SEND DATA (10.8.1)</div>
+                    <button class="tool-btn" onclick="addBlock('F1')">Send All Characters <span class="tool-code">F1</span></button>
+                    <button class="tool-btn" onclick="addBlock('F2')">Send First N Chars <span class="tool-code">F2</span></button>
+					<button class="tool-btn" onclick="addBlock('F3')">Send Up To Char <span class="tool-code">F3</span></button>
+                    <button class="tool-btn" onclick="addBlock('E9')">Send All Except Last N <span class="tool-code">E9</span></button>
+                    <button class="tool-btn" onclick="addBlock('B3')">Insert Symbology Name <span class="tool-code">B3</span></button>
+					<button class="tool-btn" onclick="addBlock('F4')">Insert Char N Times <span class="tool-code">F4</span></button>
+                </div>
+
+                <div class="tool-category">
+                    <div class="tool-category-title">MOVE CURSOR (10.8.2)</div>
+                    <button class="tool-btn" onclick="addBlock('F5')">Move Forward N <span class="tool-code">F5</span></button>
+                    <button class="tool-btn" onclick="addBlock('F6')">Move Backward N <span class="tool-code">F6</span></button>
+                    <button class="tool-btn" onclick="addBlock('F7')">Reset to Start <span class="tool-code">F7</span></button>
+                    <button class="tool-btn" onclick="addBlock('EA')">Move to End <span class="tool-code">EA</span></button>
+                </div>
+
+                <div class="tool-category">
+                    <div class="tool-category-title">SEARCH & REPLACE (10.8.3/4)</div>
+                    <button class="tool-btn" onclick="addBlock('B0')">Search String (Fwd) <span class="tool-code">B0</span></button>
+                    <button class="tool-btn" onclick="addBlock('F8')">Search Char (Fwd) <span class="tool-code">F8</span></button>
+                    <button class="tool-btn" onclick="addBlock('FB')">Suppress/Remove Chars <span class="tool-code">FB</span></button>
+                    <button class="tool-btn" onclick="addBlock('BA')">Replace String <span class="tool-code">BA</span></button>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>Formatting Sequence</h2>
+            <div id="workflowArea" class="workflow-area">
+                <div style="text-align: center; color: #999; margin-top: 50px; font-style: italic;">
+                    Drag commands here or click to add.<br>
+                    The logic executes from top to bottom.
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>Live Preview</h2>
+            
+            <div class="test-input-area">
+                <label style="font-weight: bold; font-size: 0.9rem;">Test Barcode Data:</label>
+                <input type="text" id="testInput" value="1234567890ABCDEFGHIJ" 
+                       style="width: 100%; padding: 8px; margin-top: 5px; font-family: monospace;"
+                       oninput="updateSimulation()">
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <label style="font-weight: bold; font-size: 0.9rem;">Visual Cursor State:</label>
+                <div id="visualCursor" class="io-box"></div>
+                <small style="color: #666;">Cursor is shown as <span style="color:var(--cursor-color); font-weight:bold;">|</span></small>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <label style="font-weight: bold; font-size: 0.9rem;">Final Output:</label>
+                <div id="finalOutput" class="io-box" style="color: #0ff;"></div>
+            </div>
+
+            <div class="panel final-command-box">
+                <h2 style="color: #856404; font-size: 0.8rem; margin-bottom: 5px;">Generated Command String</h2>
+                <div id="hexOutput" class="hex-string"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let workflow = [];
+        
+        // Command Definitions based on Manual
+        // Each definition handles UI inputs and Hex Generation
+        const COMMANDS = {
+            'F1': { 
+                name: 'Send All Characters', 
+                inputs: [{name: 'suffix', type: 'char', label: 'Insert After (Suffix)', default: 'CR'}],
+                desc: 'Send from cursor to end + suffix [Source 10]'
+            },
+            'F2': { 
+                name: 'Send N Characters', 
+                inputs: [
+                    {name: 'count', type: 'number', label: 'Count (00-99)', default: 10},
+                    {name: 'suffix', type: 'char', label: 'Insert After', default: 'CR'}
+                ],
+                desc: 'Send N chars from cursor + suffix [Source 14]'
+            },
+			'F3': { 
+                name: 'Send Up To Char', 
+                inputs: [
+                    {name: 'char', type: 'text', label: 'Stop at Char', default: '', maxLength: 1},
+                    {name: 'suffix', type: 'char', label: 'Insert After', default: 'CR'}
+                ],
+                desc: 'Send from cursor up to (but not including) char ss [Source 28]' 
+            },
+            'E9': { 
+                name: 'Send All Except Last N', 
+                inputs: [{name: 'count', type: 'number', label: 'Skip Last N', default: 0}],
+                desc: 'Send all but last N chars [Source 38]'
+            },
+            'B3': { name: 'Insert Symbology Name', inputs: [], desc: 'Inserts e.g., "Code128" [Source 56]' },
+			'F4': { 
+                name: 'Insert Char N Times', 
+                inputs: [
+                    {name: 'char', type: 'text', label: 'Character', default: '', maxLength: 1},
+                    {name: 'count', type: 'number', label: 'Times', default: 1}
+                ],
+                desc: 'Insert character xx, nn times [Source 41]' 
+            },
+            'F5': { 
+                name: 'Move Cursor Forward', 
+                inputs: [{name: 'count', type: 'number', label: 'Steps', default: 1}],
+                desc: 'Skip N characters [Source 85]' 
+            },
+            'F6': { 
+                name: 'Move Cursor Back', 
+                inputs: [{name: 'count', type: 'number', label: 'Steps', default: 1}],
+                desc: 'Go back N characters [Source 97]' 
+            },
+            'F7': { name: 'Reset Cursor to Start', inputs: [], desc: 'Move to index 0 [Source 100]' },
+            'EA': { name: 'Move Cursor to End', inputs: [], desc: 'Move to last index [Source 103]' },
+            'B0': {
+                name: 'Search String (Forward)',
+                inputs: [{name: 'searchStr', type: 'text', label: 'Find String', default: 'ABC'}],
+                desc: 'Finds string, moves cursor to it [Source 130]'
+            },
+            'F8': {
+                name: 'Search Char (Forward)',
+                inputs: [{name: 'char', type: 'char', label: 'Find Char', default: 'D'}],
+                desc: 'Finds char, moves cursor to it [Source 112]'
+            },
+            'FB': {
+                name: 'Suppress Characters',
+                inputs: [{name: 'char', type: 'text', label: 'Remove Char', default: '', maxLength: 1}],
+                desc: 'Removes specific char from output [Source 173]'
+            },
+            'BA': {
+                name: 'Replace String',
+                inputs: [
+                    {name: 'find', type: 'text', label: 'Find', default: '23'},
+                    {name: 'replace', type: 'text', label: 'Replace With', default: 'ABC'}
+                ],
+                desc: 'Replaces occurrences of string [Source 208]'
+            }
+        };
+
+        // Helper: Char to Hex
+        function toHex(val) {
+            if (val === 'CR') return '0D';
+            if (val === 'Tab') return '09';
+            if (val === 'LF') return '0A';
+			if (val === 'NUL') return '00';
+            if (val === 'None') return ''; // No suffix
+            if (val.length === 1) return val.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0');
+            return '';
+        }
+
+        // Helper: Number to padded string (assuming decimal input for command params based on typical usage, 
+        // though manual ambiguity exists, we use hex representation of the value)
+        function numToHexByte(num) {
+            let n = parseInt(num);
+            if (isNaN(n)) return '00';
+            // If the manual implies '10' means 10 chars, typically represented as 0A in hex byte.
+            return n.toString(16).toUpperCase().padStart(2, '0');
+        }
+
+        // Helper: String to Hex Stream
+        function strToHex(str) {
+            let hex = '';
+            for(let i=0; i<str.length; i++) {
+                hex += str.charCodeAt(i).toString(16).toUpperCase();
+            }
+            return hex;
+        }
+
+        // Add a block to workflow
+        function addBlock(cmdId) {
+            const id = Date.now();
+            const config = { ...COMMANDS[cmdId] };
+            // Initialize values
+            config.values = {};
+            config.inputs.forEach(inp => config.values[inp.name] = inp.default);
+            
+            workflow.push({ id, cmdId, ...config });
+            renderBlocks();
+            updateSimulation();
+        }
+
+        // Remove block
+        function removeBlock(id) {
+            workflow = workflow.filter(b => b.id !== id);
+            renderBlocks();
+            updateSimulation();
+        }
+
+        // Update block value
+        function updateValue(id, field, value) {
+            const block = workflow.find(b => b.id === id);
+            if(block) {
+                block.values[field] = value;
+                updateSimulation(); // Real-time update
+            }
+        }
+
+        function resetAll() {
+            workflow = [];
+            renderBlocks();
+            updateSimulation();
+        }
+
+        // Render the Workflow UI
+        function renderBlocks() {
+            const area = document.getElementById('workflowArea');
+            area.innerHTML = '';
+            
+            if(workflow.length === 0) {
+                area.innerHTML = '<div style="text-align: center; color: #999; margin-top: 50px; font-style: italic;">Drag commands here or click to add.<br>The logic executes from top to bottom.</div>';
+                return;
+            }
+
+            workflow.forEach((block, index) => {
+                const el = document.createElement('div');
+                el.className = 'flow-block';
+                
+                let inputsHtml = '';
+                block.inputs.forEach(inp => {
+                    let inputControl = '';
+                    if(inp.type === 'number') {
+                        inputControl = `<input type="number" value="${block.values[inp.name]}" onchange="updateValue(${block.id}, '${inp.name}', this.value)" style="width: 60px;">`;
+                    } else if (inp.type === 'char') {
+                        inputControl = `
+                        <select onchange="updateValue(${block.id}, '${inp.name}', this.value)">
+                            <option value="None" ${block.values[inp.name] === 'None' ? 'selected' : ''}>None</option>
+                            <option value="CR" ${block.values[inp.name] === 'CR' ? 'selected' : ''}>&lt;CR&gt;</option>
+							<option value="LF" ${block.values[inp.name] === 'LF' ? 'selected' : ''}>&lt;LF&gt; (0x0A)</option>
+                            <option value="Tab" ${block.values[inp.name] === 'Tab' ? 'selected' : ''}>&lt;Tab&gt;</option>
+                            <option value="D" ${block.values[inp.name] === 'D' ? 'selected' : ''}>D</option>
+                            <option value=" " ${block.values[inp.name] === ' ' ? 'selected' : ''}>Space</option>
+							<option value="NUL" ${block.values[inp.name] === 'NUL' ? 'selected' : ''}>&lt;NUL&gt; (0x00)</option>
+                        </select>`;
+                    } else {
+                        //inputControl = `<input type="text" value="${block.values[inp.name]}" onchange="updateValue(${block.id}, '${inp.name}', this.value)" style="width: 100px;">`;
+						// Check if maxLength is defined in COMMANDS, otherwise empty string
+                        const limit = inp.maxLength ? `maxlength="${inp.maxLength}"` : '';
+                        
+                        // Inject the limit into the input tag
+                        inputControl = `<input type="text" ${limit} value="${block.values[inp.name]}" onchange="updateValue(${block.id}, '${inp.name}', this.value)" style="width: 100px;">`;
+                    }
+
+                    inputsHtml += `
+                        <div class="input-group">
+                            <label>${inp.label}</label>
+                            ${inputControl}
+                        </div>
+                    `;
+                });
+
+                el.innerHTML = `
+                    <div class="flow-block-header">
+                        <span>${index + 1}. ${block.name} <span style="color:#999; font-weight:normal; font-size:0.8em">(${block.cmdId})</span></span>
+                        <span class="remove-btn" onclick="removeBlock(${block.id})">&times;</span>
+                    </div>
+                    <div class="flow-inputs">${inputsHtml}</div>
+                    <div style="font-size: 0.75rem; color: #888; margin-top: 5px;">${block.desc}</div>
+                `;
+                area.appendChild(el);
+            });
+        }
+
+        // SIMULATION ENGINE
+        function updateSimulation() {
+            //const inputStr = document.getElementById('testInput').value;
+			let inputStr = document.getElementById('testInput').value;
+            let cursor = 0;
+            let output = "";
+            let hexCmd = "";
+
+            // Simulation Loop
+            workflow.forEach(step => {
+                const v = step.values;
+                
+                // --- HEX GENERATION ---
+                let stepHex = step.cmdId;
+                
+                // Logic per command
+                if (step.cmdId === 'F1') {
+                    // Syntax F1xx [Source 10]
+                    const suffixHex = v.suffix === 'None' ? '' : toHex(v.suffix);
+                    stepHex += suffixHex;
+                    
+                    // Sim
+                    output += inputStr.substring(cursor);
+                    if(v.suffix === 'CR') output += '<CR>';
+                    else if(v.suffix === 'Tab') output += '<Tab>';
+					else if(v.suffix === 'LF') output += '<LF>';
+					else if(v.suffix === 'NUL') output += '<NUL>';
+                    else if(v.suffix !== 'None') output += v.suffix;
+                    cursor = inputStr.length; // Cursor effectively at end
+                }
+                
+                else if (step.cmdId === 'F2') {
+                    // Syntax F2nnxx [Source 14]
+                    const count = parseInt(v.count);
+                    const suffixHex = v.suffix === 'None' ? '' : toHex(v.suffix);
+                    stepHex += numToHexByte(count) + suffixHex;
+
+                    // Sim
+                    const chunk = inputStr.substr(cursor, count);
+                    output += chunk;
+                    if(v.suffix === 'CR') output += '<CR>';
+					else if(v.suffix === 'Tab') output += '<Tab>';
+					else if(v.suffix === 'LF') output += '<LF>';
+					else if(v.suffix === 'NUL') output += '<NUL>';
+                    else if(v.suffix !== 'None') output += v.suffix;
+                    cursor += chunk.length;
+                }
+
+                else if (step.cmdId === 'F5') {
+                    // Syntax F5nn [Source 85]
+                    const count = parseInt(v.count);
+                    stepHex += numToHexByte(count);
+                    // Sim
+                    cursor = Math.min(inputStr.length, cursor + count);
+                }
+
+                else if (step.cmdId === 'F7') {
+                    // Syntax F7 [Source 100]
+                    cursor = 0;
+                }
+                
+                else if (step.cmdId === 'B0') {
+                    // Syntax B0nnnnS [Source 130]
+                    // We need length of string in 4 digits hex? Manual says nnnn.
+                    // Source 135 Example: B00003... 
+                    const sLen = v.searchStr.length;
+                    const lenHex = sLen.toString().padStart(4, '0'); // Assuming decimal digits here per example
+                    const strHex = strToHex(v.searchStr);
+                    stepHex += lenHex + strHex;
+
+                    // Sim
+                    const foundIdx = inputStr.indexOf(v.searchStr, cursor);
+                    if(foundIdx !== -1) cursor = foundIdx; 
+                }
+
+                else if (step.cmdId === 'BA') {
+                     // Syntax BAnnNN1SS1NN2SS2 [Source 209]
+                     // Simplified logic for simulation
+                     const findLen = v.find.length.toString().padStart(2,'0');
+                     const replLen = v.replace.length.toString().padStart(2,'0');
+                     
+                     // Assuming nn=00 (replace all)
+                     stepHex += "00" + findLen + strToHex(v.find) + replLen + strToHex(v.replace);
+
+                     // Sim (Only affects output, not cursor usually)
+                     // Note: BA acts on Output buffer or Input? Source 216 says "replace... in the output message"
+                     // This is tricky. It usually implies post-processing.
+                     // For this visualizer, we will append a note or try to replace in current output var?
+                     output = output.split(v.find).join(v.replace);
+                }
+				else if (step.cmdId === 'EA') {
+                    // Move Cursor to End [Source 103]
+                    cursor = inputStr.length;
+                }
+                else if (step.cmdId === 'F6') {
+                    // Syntax F6nn [Source 97]: Move Cursor Backward
+                    const count = parseInt(v.count);
+                    stepHex += numToHexByte(count);
+                    // Simulation: Move back, but do not go below index 0
+                    cursor = Math.max(0, cursor - count-1);
+                }
+
+                else if (step.cmdId === 'F8') {
+                    // Syntax F8xx [Source 112]: Search Forward for Character
+                    // Use toHex() because input type is 'char' (Dropdown)
+                    stepHex += toHex(v.char); 
+                    
+                    // Simulation: Find the character starting from current cursor
+                    // Only simulate if the dropdown value is a single character (e.g. "D" or " ")
+                    // (Ignoring "CR"/"LF" for simulation as they are hard to type in the test box)
+                    if (v.char.length === 1) {
+                        const foundIdx = inputStr.indexOf(v.char, cursor);
+                        if(foundIdx !== -1) cursor = foundIdx; 
+                    }
+                }
+				else if (step.cmdId === 'E9') {
+                    // Syntax E9nn [Source 38]: Send All but Last N
+                    const count = parseInt(v.count);
+                    stepHex += numToHexByte(count);
+                    
+                    // Logic: Calculate how many characters are left, subtract N, and send the rest.
+                    const remainingLen = inputStr.length - cursor;
+                    const sendLen = Math.max(0, remainingLen - count);
+                    
+                    output += inputStr.substr(cursor, sendLen);
+                    
+                    // Manual Source 40: "Cursor is moved forward to one position past the last... character included"
+                    cursor += sendLen;
+                }
+                else if (step.cmdId === 'F4') {
+                    // Syntax F4xxnn [Source 43]: Insert Char xx, nn times
+                    // Note: Hex order is Command -> Char -> Count
+                    const count = parseInt(v.count);
+                    stepHex += toHex(v.char) + numToHexByte(count);
+
+                    // Simulation: Append char to output N times
+                    // We need to handle the visual brackets for special chars like <CR>
+                    let visualChar = v.char;
+                    if(v.char === 'CR') visualChar = '<CR>';
+                    else if(v.char === 'Tab') visualChar = '<Tab>';
+                    else if(v.char === 'LF') visualChar = '<LF>';
+                    else if(v.char === 'NUL') visualChar = '<NUL>';
+                    else if(v.char === 'None') visualChar = '';
+
+                    for(let i=0; i<count; i++) {
+                        output += visualChar;
+                    }
+                    // Cursor does NOT move [Source 44]
+                }
+				else if (step.cmdId === 'F3') {
+                    // Syntax F3ssxx [Source 28]: Send up to 'ss', insert 'xx'
+                    // ss = char to find, xx = suffix
+                    stepHex += toHex(v.char) + toHex(v.suffix);
+
+                    const searchChar = v.char;
+                    
+                    // Logic: Find index of searchChar starting from current cursor
+                    // We only process if the user actually typed a char
+                    if (searchChar.length > 0) {
+                        const foundIdx = inputStr.indexOf(searchChar, cursor);
+
+                        if (foundIdx !== -1) {
+                            // Send data FROM cursor UP TO (but not including) the found index
+                            const chunk = inputStr.substring(cursor, foundIdx);
+                            output += chunk;
+
+                            // Manual Source 29: "The cursor is moved forward to the 'ss' character."
+                            cursor = foundIdx;
+                        }
+                    }
+
+                    // Append the Suffix (xx)
+                    let visualSuffix = v.suffix;
+                    if(v.suffix === 'CR') visualSuffix = '<CR>';
+                    else if(v.suffix === 'Tab') visualSuffix = '<Tab>';
+                    else if(v.suffix === 'LF') visualSuffix = '<LF>';
+                    else if(v.suffix === 'NUL') visualSuffix = '<NUL>';
+                    else if(v.suffix === 'None') visualSuffix = '';
+                    
+                    output += visualSuffix;
+                }		
+				else if (step.cmdId === 'FB') {
+                    // Syntax FBnnxx [Source 173]: Suppress characters
+                    // nn = count (01 for this single input), xx = hex value
+                    
+                    const charToRemove = v.char;
+                    stepHex += "01" + toHex(charToRemove);
+
+                    // Logic: Remove all instances of this character from the cursor onwards
+                    if (charToRemove.length > 0) {
+                        const preCursor = inputStr.substring(0, cursor);
+                        const postCursor = inputStr.substring(cursor);
+                        
+                        // Replace all occurrences in the remaining text
+                        // Using split/join is a simple way to replace global occurrences
+                        const cleanedPost = postCursor.split(charToRemove).join('');
+                        
+                        // Update the main input string
+                        // This will cause the "Visual Cursor State" to instantly update
+                        inputStr = preCursor + cleanedPost;
+                    }
+                }				
+                hexCmd += stepHex;
+            });
+
+            // Update UI
+            document.getElementById('hexOutput').textContent = hexCmd || "Add blocks to generate code...";
+            document.getElementById('finalOutput').textContent = output || "(Empty)";
+
+            // Update Visual Cursor
+            // Reconstruct string with cursor inserted
+            const preCursor = inputStr.substring(0, cursor);
+            const postCursor = inputStr.substring(cursor);
+            document.getElementById('visualCursor').innerHTML = 
+                escapeHtml(preCursor) + '<span class="cursor-marker"></span>' + escapeHtml(postCursor);
+        }
+
+        function escapeHtml(text) {
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // Init
+        updateSimulation();
+
+    </script>
+</body>
+</html>
