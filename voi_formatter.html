@@ -221,8 +221,13 @@
                 <div class="tool-category">
                     <div class="tool-category-title">SEARCH & REPLACE (10.8.3/4)</div>
                     <button class="tool-btn" onclick="addBlock('B0')">Search String (Fwd) <span class="tool-code">B0</span></button>
+					<button class="tool-btn" onclick="addBlock('B1')">Search String (Back) <span class="tool-code">B1</span></button>
+					<button class="tool-btn" onclick="addBlock('E6')">Search Non-Match (Fwd) <span class="tool-code">E6</span></button>
+					<button class="tool-btn" onclick="addBlock('E7')">Search Non-Match (Back) <span class="tool-code">E7</span></button>
                     <button class="tool-btn" onclick="addBlock('F8')">Search Char (Fwd) <span class="tool-code">F8</span></button>
+					<button class="tool-btn" onclick="addBlock('F9')">Search Char (Back) <span class="tool-code">F9</span></button>
                     <button class="tool-btn" onclick="addBlock('FB')">Suppress/Remove Chars <span class="tool-code">FB</span></button>
+					<button class="tool-btn" onclick="addBlock('E4')">Replace Char <span class="tool-code">E4</span></button>
                     <button class="tool-btn" onclick="addBlock('BA')">Replace String <span class="tool-code">BA</span></button>
                 </div>
 
@@ -336,15 +341,44 @@
                 inputs: [{name: 'searchStr', type: 'text', label: 'Find String', default: 'ABC'}],
                 desc: 'Finds string, moves cursor to it [Source 130]'
             },
+			'B1': {
+                name: 'Search String (Back)',
+                inputs: [{name: 'searchStr', type: 'text', label: 'Find String', default: 'ABC'}],
+                desc: 'Search backward for string [Source 422]'
+            },
+			'E6': {
+                name: 'Search Non-Match (Fwd)',
+                inputs: [{name: 'char', type: 'text', label: 'Skip Char', default: '', maxLength: 1}],
+                desc: 'Finds first character that is NOT this char [Source 978]'
+            },
+			'E7': {
+                name: 'Search Non-Match (Back)',
+                inputs: [{name: 'char', type: 'text', label: 'Skip Char', default: '', maxLength: 1}],
+                desc: 'Finds first character backward that is NOT this char [Source 985]'
+            },
             'F8': {
                 name: 'Search Char (Forward)',
-                inputs: [{name: 'char', type: 'char', label: 'Find Char', default: 'D'}],
+                inputs: [{name: 'char', type: 'text', label: 'Find Char', default: ''}],
                 desc: 'Finds char, moves cursor to it [Source 112]'
+            },
+			'F9': {
+                name: 'Search Char (Back)',
+                inputs: [{name: 'char', type: 'text', label: 'Find Char', default: ''}],
+                desc: 'Search backward for char [Source 397]'
             },
             'FB': {
                 name: 'Suppress Characters',
-                inputs: [{name: 'char', type: 'text', label: 'Remove Char', default: '', maxLength: 1}],
+                inputs: [{name: 'char', type: 'text', label: 'Remove Char', default: '', maxLength: 15}],
                 desc: 'Removes specific char from output [Source 173]'
+            },
+			'E4': {
+                name: 'Replace Char with String',
+                inputs: [
+                    // Count is now implicit, so we remove the input field
+                    {name: 'find', type: 'text', label: 'Find Char', default: 'A', maxLength: 1},
+                    {name: 'replace', type: 'text', label: 'Replace With', default: 'B', maxLength: 15} // Increased limit to 15
+                ],
+                desc: 'Replaces char xx with string. Count = Len+1.'
             },
 			'BA': {
                 name: 'Replace String',
@@ -373,8 +407,7 @@
         function numToHexByte(num) {
             let n = parseInt(num);
             if (isNaN(n)) return '00';
-            // If the manual implies '10' means 10 chars, typically represented as 0A in hex byte.
-            return n.toString(16).toUpperCase().padStart(2, '0');
+            return n.toString(10).padStart(2, '0');
         }
 
         // Helper: String to Hex Stream
@@ -554,7 +587,19 @@
                     const foundIdx = inputStr.indexOf(v.searchStr, cursor);
                     if(foundIdx !== -1) cursor = foundIdx; 
                 }
+				else if (step.cmdId === 'B1') {
+                    // Syntax B1nnnnS: Search Backward for String
+                    const sLen = v.searchStr.length;
+                    const lenHex = sLen.toString().padStart(4, '0'); 
+                    const strHex = strToHex(v.searchStr);
+                    stepHex += lenHex + strHex;
 
+                    // Simulation: Search BACKWARDS from current cursor
+                    if (v.searchStr.length > 0) {
+                        const foundIdx = inputStr.lastIndexOf(v.searchStr, cursor);
+                        if(foundIdx !== -1) cursor = foundIdx; 
+                    }
+                }
 				else if (step.cmdId === 'BA') {
                      // Syntax BAnnNN1SS1NN2SS2 [Source 484]
                      // nn: Count (00=All), NN1: Find Len, SS1: Find String, NN2: Repl Len, SS2: Repl String
@@ -608,6 +653,17 @@
                     // (Ignoring "CR"/"LF" for simulation as they are hard to type in the test box)
                     if (v.char.length === 1) {
                         const foundIdx = inputStr.indexOf(v.char, cursor);
+                        if(foundIdx !== -1) cursor = foundIdx; 
+                    }
+                }
+				else if (step.cmdId === 'F9') {
+                    // Syntax F9xx [Source 396]: Search Backward
+                    stepHex += toHex(v.char); 
+                    
+                    // Simulation: Find the character searching BACKWARDS from current cursor
+                    if (v.char.length === 1) {
+                        // lastIndexOf searches backwards from the 'fromIndex' (cursor)
+                        const foundIdx = inputStr.lastIndexOf(v.char, cursor);
                         if(foundIdx !== -1) cursor = foundIdx; 
                     }
                 }
@@ -697,7 +753,62 @@
                         // This will cause the "Visual Cursor State" to instantly update
                         inputStr = preCursor + cleanedPost;
                     }
-                }				
+                }		
+                else if (step.cmdId === 'E6') {
+                    // Syntax E6xx [Source 978]: Search Forward for Non-Matching Character
+                    stepHex += toHex(v.char); 
+                    
+                    // Logic: Iterate forward from cursor. Stop at first char that is NOT v.char
+                    if (v.char.length === 1) {
+                        for(let i = cursor; i < inputStr.length; i++) {
+                            if (inputStr[i] !== v.char) {
+                                cursor = i;
+                                break; // Found the non-matching char, stop here
+                            }
+                        }
+                    }
+                }
+				else if (step.cmdId === 'E7') {
+                    // Syntax E7xx [Source 985]: Search Backward for Non-Matching Character
+                    stepHex += toHex(v.char); 
+                    
+                    // Logic: Iterate BACKWARD from cursor. Stop at first char that is NOT v.char
+                    if (v.char.length === 1) {
+                        for(let i = cursor; i >= 0; i--) {
+                            if (inputStr[i] !== v.char) {
+                                cursor = i;
+                                break; // Found the non-matching char, stop here
+                            }
+                        }
+                    }
+                }
+				else if (step.cmdId === 'E4') {
+                    // Syntax: E4 + nn + xx + yyyyy...
+                    // nn = Length of ReplaceString + 1
+                    
+                    const replaceStr = v.replace;
+                    const nn = replaceStr.length + 1; // Implicit Count Calculation
+
+                    // Hex Generation: 
+                    // 1. numToHexByte(nn): The calculated count
+                    // 2. toHex(v.find): The character to find
+                    // 3. strToHex(replaceStr): The replacement string converted to hex
+                    stepHex += numToHexByte(nn) + toHex(v.find) + strToHex(replaceStr);
+
+                    // Simulation Logic:
+                    // Replace ALL occurrences of the 'find' char with the 'replace' string
+                    // in the data following the cursor.
+                    if (v.find.length === 1) {
+                        const preCursor = inputStr.substring(0, cursor);
+                        let postCursor = inputStr.substring(cursor);
+                        
+                        // Use split/join to replace global occurrences
+                        postCursor = postCursor.split(v.find).join(replaceStr);
+                        
+                        // Update the input string to show the result
+                        inputStr = preCursor + postCursor;
+                    }
+                }
                 hexCmd += stepHex;
             });
 
