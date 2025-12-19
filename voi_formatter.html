@@ -207,6 +207,7 @@
 					<button class="tool-btn" onclick="addBlock('F3')">Send Up To Char <span class="tool-code">F3</span></button>
                     <button class="tool-btn" onclick="addBlock('E9')">Send All Except Last N <span class="tool-code">E9</span></button>
                     <button class="tool-btn" onclick="addBlock('B3')">Insert Symbology Name <span class="tool-code">B3</span></button>
+					<button class="tool-btn" onclick="addBlock('B4')">Insert Barcode Length <span class="tool-code">B4</span></button>
 					<button class="tool-btn" onclick="addBlock('F4')">Insert Char N Times <span class="tool-code">F4</span></button>
                 </div>
 
@@ -227,7 +228,7 @@
                     <button class="tool-btn" onclick="addBlock('F8')">Search Char (Fwd) <span class="tool-code">F8</span></button>
 					<button class="tool-btn" onclick="addBlock('F9')">Search Char (Back) <span class="tool-code">F9</span></button>
                     <button class="tool-btn" onclick="addBlock('FB')">Suppress/Remove Chars <span class="tool-code">FB</span></button>
-					<button class="tool-btn" onclick="addBlock('E4')">Replace Char <span class="tool-code">E4</span></button>
+					<button class="tool-btn" onclick="addBlock('E4')">Replace Chars <span class="tool-code">E4</span></button>
                     <button class="tool-btn" onclick="addBlock('BA')">Replace String <span class="tool-code">BA</span></button>
                 </div>
 
@@ -316,6 +317,7 @@
                 desc: 'Send all but last N chars [Source 38]'
             },
             'B3': { name: 'Insert Symbology Name', inputs: [], desc: 'Inserts e.g., "Code128" [Source 56]' },
+			'B4': { name: 'Insert Barcode Length', inputs: [], desc: 'Inserts length (e.g. "20") [Source 333]' },
 			'F4': { 
                 name: 'Insert Char N Times', 
                 inputs: [
@@ -372,13 +374,12 @@
                 desc: 'Removes specific char from output [Source 173]'
             },
 			'E4': {
-                name: 'Replace Char with String',
+                name: 'Map/Replace Chars',
                 inputs: [
-                    // Count is now implicit, so we remove the input field
-                    {name: 'find', type: 'text', label: 'Find Char', default: 'A', maxLength: 1},
-                    {name: 'replace', type: 'text', label: 'Replace With', default: 'B', maxLength: 15} // Increased limit to 15
+                    {name: 'find', type: 'text', label: 'Find Chars (f1..)', default: 'abc', maxLength: 15},
+                    {name: 'replace', type: 'text', label: 'Replace With (r1..)', default: '123', maxLength: 15}
                 ],
-                desc: 'Replaces char xx with string. Count = Len+1.'
+                desc: 'Maps char f1 to r1, f2 to r2, etc. [User Spec]'
             },
 			'BA': {
                 name: 'Replace String',
@@ -782,33 +783,54 @@
                         }
                     }
                 }
-				else if (step.cmdId === 'E4') {
-                    // Syntax: E4 + nn + xx + yyyyy...
-                    // nn = Length of ReplaceString + 1
+                else if (step.cmdId === 'E4') {
+                    // Syntax E4 + nn + f1r1f2r2...
+                    // nn is total count (find len + replace len), always even.
                     
-                    const replaceStr = v.replace;
-                    const nn = replaceStr.length + 1; // Implicit Count Calculation
+                    let fStr = v.find;
+                    let rStr = v.replace;
 
-                    // Hex Generation: 
-                    // 1. numToHexByte(nn): The calculated count
-                    // 2. toHex(v.find): The character to find
-                    // 3. strToHex(replaceStr): The replacement string converted to hex
-                    stepHex += numToHexByte(nn) + toHex(v.find) + strToHex(replaceStr);
+                    // Ensure pairs: limit logic to the shortest string length
+                    const len = Math.min(fStr.length, rStr.length);
+                    
+                    // Calculate nn (Total hex bytes for the map parameters)
+                    const nn = len * 2; 
 
-                    // Simulation Logic:
-                    // Replace ALL occurrences of the 'find' char with the 'replace' string
-                    // in the data following the cursor.
-                    if (v.find.length === 1) {
+                    // Generate Hex: E4 + nn + f1r1f2r2...
+                    let mapHex = "";
+                    for(let i=0; i<len; i++) {
+                        mapHex += toHex(fStr[i]) + toHex(rStr[i]);
+                    }
+                    stepHex += numToHexByte(nn) + mapHex;
+
+                    // Simulation Logic: 
+                    // Transliterate characters in the text (Simultaneous mapping)
+                    if (len > 0) {
                         const preCursor = inputStr.substring(0, cursor);
-                        let postCursor = inputStr.substring(cursor);
+                        const postCursor = inputStr.substring(cursor);
                         
-                        // Use split/join to replace global occurrences
-                        postCursor = postCursor.split(v.find).join(replaceStr);
-                        
-                        // Update the input string to show the result
-                        inputStr = preCursor + postCursor;
+                        // Map each character in the remaining string
+                        const mappedPost = postCursor.split('').map(char => {
+                            // Find if this character exists in the 'Find' list
+                            // We use the limited 'len' to ensure we only map valid pairs
+                            const idx = fStr.substring(0, len).indexOf(char);
+                            
+                            // If found, return the corresponding 'Replace' char, else return original
+                            return (idx !== -1) ? rStr[idx] : char;
+                        }).join('');
+
+                        inputStr = preCursor + mappedPost;
                     }
                 }
+				else if (step.cmdId === 'B4') {
+                    // Syntax B4 [Source 333]: Insert Barcode Length
+                    // Logic: Insert length as numeric string, no leading zeros [Source 336]
+                    output += inputStr.length.toString();
+                    
+                    // Hex: B4 (No parameters to add)
+                    // Cursor: Does NOT move [Source 335]
+                }				
+
                 hexCmd += stepHex;
             });
 
