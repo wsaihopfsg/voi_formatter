@@ -574,20 +574,25 @@
                     // Syntax F7 [Source 100]
                     cursor = 0;
                 }
-                
-                else if (step.cmdId === 'B0') {
-                    // Syntax B0nnnnS [Source 130]
-                    // We need length of string in 4 digits hex? Manual says nnnn.
-                    // Source 135 Example: B00003... 
+				else if (step.cmdId === 'B0') {
+                    // Syntax B0nnnnS [Source 130]: Search Forward for String
                     const sLen = v.searchStr.length;
-                    const lenHex = sLen.toString().padStart(4, '0'); // Assuming decimal digits here per example
+                    const lenHex = sLen.toString().padStart(4, '0'); 
                     const strHex = strToHex(v.searchStr);
                     stepHex += lenHex + strHex;
 
-                    // Sim
+                    // Simulation: Search FORWARD from current cursor
                     const foundIdx = inputStr.indexOf(v.searchStr, cursor);
-                    if(foundIdx !== -1) cursor = foundIdx; 
-                }
+                    
+                    if(foundIdx !== -1) {
+                        cursor = foundIdx; 
+                    } else {
+                        // FAILURE SIMULATION:
+                        // If string not found, output error and stop processing
+                        output = "Error: Search string not found.";
+                        cursor = inputStr.length; 
+                    }
+                }                
 				else if (step.cmdId === 'B1') {
                     // Syntax B1nnnnS: Search Backward for String
                     const sLen = v.searchStr.length;
@@ -598,7 +603,15 @@
                     // Simulation: Search BACKWARDS from current cursor
                     if (v.searchStr.length > 0) {
                         const foundIdx = inputStr.lastIndexOf(v.searchStr, cursor);
-                        if(foundIdx !== -1) cursor = foundIdx; 
+                        
+                        if(foundIdx !== -1) {
+                            cursor = foundIdx; 
+                        } else {
+                            // FAILURE SIMULATION: 
+                            // If not found, indicate error and stop processing (move cursor to end)
+                            output = "Error: Search string not found.";
+                            cursor = inputStr.length; 
+                        }
                     }
                 }
 				else if (step.cmdId === 'BA') {
