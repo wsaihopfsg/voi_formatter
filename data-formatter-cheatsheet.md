@@ -25,11 +25,18 @@ Data Formatter commands manipulate a **virtual cursor** along the scanned barcod
 
 *   **`F1xx`** — **Send All Characters**
     *   *Description:* Sends all characters from the current cursor position to the end of the barcode, followed by the insert character `xx`.
-    *   *Syntax:* `F1xx` (where `xx` is the trailing insert character's hex value).
+    *   *Syntax:* `F1xx` (where `xx` is the trailing insert character's hex value; 00 is End-of-string filler, no-op separator).
 
 *   **`F2nnxx`** — **Send a Number of Characters**
     *   *Description:* Sends `nn` characters starting from the current cursor position, followed by the insert character `xx`. If the end of the data is reached before `nn` characters, it stops sending data and inserts `xx`.
-    *   *Syntax:* `F2nnxx` (`nn` = decimal 00-99, `xx` = insert character hex).
+    *   *Syntax:* `F2nnxx` (`nn` = decimal 00-99, `xx` = insert character hex; 00 is End-of-string filler, no-op separator and the cursor stops here).
+	* 	*Example:* Send first 10 characters from the barcode above, followed by a carriage return.
+	*   *F2100D*
+	*   *F2*: “Send a number of characters” command
+	*   *10*: Send 10 charcters
+	*   *0D*: Carriage return hex value
+	*   *Input*: 1234567890ABCDEF
+	*   *Output*: 1234567890<CR>
 
 *   **`F3ssxx`** — **Send All Characters Up to a Character**
     *   *Description:* Sends all characters starting from the current cursor position up to (but not including) the target character `ss`. Follows with insert character `xx`. **Moves the cursor to `ss`**.
