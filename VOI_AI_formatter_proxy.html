@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pepperl+Fuchs Data Formatter GUI & AI</title>
+    <style>
+        :root {
+            --bg-color: #f4f7f6;
+            --panel-bg: #ffffff;
+            --primary: #008060;
+            --accent: #2c3e50;
+            --border: #e1e4e8;
+            --cursor-color: #e74c3c;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg-color);
+            color: #333;
+            height: 100vh;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+        }
+
+        h1 { font-size: 1.2rem; margin-bottom: 10px; color: var(--accent); }
+        h2 { font-size: 1rem; margin-top: 0; color: #666; text-transform: uppercase; letter-spacing: 0.05em; }
+
+        /* AI Top Section */
+        .ai-section { margin-bottom: 20px; }
+        .ai-input-group { display: flex; gap: 10px; align-items: flex-start; }
+        .ai-textarea {
+            flex: 1; height: 60px; padding: 10px; font-family: monospace;
+            border: 1px solid #ccc; border-radius: 4px; resize: vertical;
+        }
+        .ai-controls { display: flex; flex-direction: column; gap: 5px; width: 250px; }
+        .btn-ai {
+            background: #00a587; color: white; border: none; padding: 10px;
+            border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 1rem;
+            transition: background 0.2s;
+        }
+        .btn-ai:hover { background: #008f73; }
+        .ai-output-box {
+            padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-family: monospace;
+            background: #fff; color: #333; box-sizing: border-box;
+        }
+
+        /* Main Grid Layout */
+        .container {
+            display: grid; grid-template-columns: 250px 1fr 300px; gap: 20px;
+            flex: 1; min-height: 0;
+        }
+
+        /* Common Panel Styles */
+        .panel {
+            background: var(--panel-bg); border: 1px solid var(--border); border-radius: 8px;
+            padding: 15px; display: flex; flex-direction: column; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+
+        /* TOOLBOX (Left) */
+        .toolbox-list { overflow-y: auto; flex: 1; }
+        .tool-category { margin-bottom: 15px; }
+        .tool-category-title {
+            font-size: 0.85rem; font-weight: bold; color: #888; margin-bottom: 8px;
+            border-bottom: 1px solid #eee; padding-bottom: 4px;
+        }
+        .tool-btn {
+            display: block; width: 100%; text-align: left; padding: 10px; margin-bottom: 5px;
+            background: #f8f9fa; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;
+            font-size: 0.9rem; transition: all 0.2s; box-sizing: border-box;
+        }
+        .tool-btn:hover { background: #eef2f5; border-color: var(--primary); transform: translateX(2px); }
+        .tool-code { float: right; font-family: monospace; color: #999; font-size: 0.8em; }
+
+        /* WORKFLOW (Center) */
+        .workflow-area {
+            background: #fafafa; border: 2px dashed #ddd; flex: 1; overflow-y: auto;
+            padding: 10px; border-radius: 6px;
+        }
+        .flow-block {
+            background: white; border-left: 4px solid var(--primary); padding: 12px; margin-bottom: 10px;
+            border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); position: relative;
+            animation: slideIn 0.2s ease-out;
+        }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .flow-block-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-weight: 600; }
+        .remove-btn { color: #ff6b6b; cursor: pointer; font-size: 1.2rem; line-height: 1; }
+        .flow-inputs { display: flex; gap: 10px; flex-wrap: wrap; }
+        .input-group { display: flex; flex-direction: column; }
+        .input-group label { font-size: 0.75rem; color: #666; margin-bottom: 2px; }
+        .input-group input, .input-group select { padding: 5px; border: 1px solid #ddd; border-radius: 3px; font-family: monospace; }
+        
+        /* PREVIEW & OUTPUT (Right) */
+        .test-input-area { margin-bottom: 20px; flex-shrink: 0; }
+        .io-box {
+            font-family: 'Courier New', monospace; background: #222; color: #0f0; padding: 10px;
+            border-radius: 4px; min-height: 60px; white-space: pre-wrap; word-break: break-all;
+            margin-top: 5px; flex-shrink: 0;
+        }
+        .cursor-marker {
+            display: inline-block; width: 2px; height: 1.2em; background-color: var(--cursor-color);
+            vertical-align: middle; animation: blink 1s infinite;
+        }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        .final-command-box {
+            margin-top: auto; background: #fff3cd; border: 1px solid #ffeeba; color: #856404;
+            padding: 12px; border-radius: 6px; flex-shrink: 0;
+        }
+        .hex-string { font-family: monospace; word-break: break-all; font-weight: bold; min-height: 1.2em; }
+
+        /* Bottom Action Buttons */
+        .action-buttons { display: flex; gap: 10px; margin-top: 15px; flex-shrink: 0; }
+        .btn-generate {
+            flex: 1; background: var(--primary); color: white; text-decoration: none; font-weight: bold;
+            font-size: 1rem; padding: 12px; border-radius: 4px; text-align: center; display: flex;
+            justify-content: center; align-items: center; gap: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: opacity 0.2s; box-sizing: border-box;
+        }
+        .btn-generate:hover { opacity: 0.9; }
+        .btn-reset {
+            flex: 1; padding: 12px; background: #e74c3c; color: white; border: none; border-radius: 4px;
+            cursor: pointer; font-weight: bold; font-size: 1rem; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: opacity 0.2s; box-sizing: border-box;
+        }
+        .btn-reset:hover { opacity: 0.9; }
+
+    </style>
+</head>
+<body>
+
+    <!-- AI Top Section -->
+    <div class="ai-section">
+        <h1>AI Data Formatting Assistant</h1>
+        <div class="ai-input-group">
+            <textarea id="userInput" class="ai-textarea" placeholder="e.g., Send the first 3 characters and follow it with a NUL character"></textarea>
+            <div class="ai-controls">
+                <button onclick="generateFormattingCommand()" class="btn-ai">AI Generate!</button>
+                <input type="text" id="resultDisplay" class="ai-output-box" readonly placeholder="Resulting command..." />
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Builder Container -->
+    <div class="container">
+        <!-- Toolbox -->
+        <div class="panel">
+            <h2>Command Toolbox</h2>
+            <div class="toolbox-list">
+                <div class="tool-category">
+                    <div class="tool-category-title">SEND DATA (10.8.1)</div>
+                    <button class="tool-btn" onclick="addBlock('F1')">Send All Characters <span class="tool-code">F1</span></button>
+                    <button class="tool-btn" onclick="addBlock('F2')">Send First N Chars <span class="tool-code">F2</span></button>
+					<button class="tool-btn" onclick="addBlock('F3')">Send Up To Char <span class="tool-code">F3</span></button>
+                    <button class="tool-btn" onclick="addBlock('E9')">Send All Except Last N <span class="tool-code">E9</span></button>
+                    <button class="tool-btn" onclick="addBlock('B3')">Insert Symbology Name <span class="tool-code">B3</span></button>
+					<button class="tool-btn" onclick="addBlock('B4')">Insert Barcode Length <span class="tool-code">B4</span></button>
+					<button class="tool-btn" onclick="addBlock('F4')">Insert Char N Times <span class="tool-code">F4</span></button>
+                </div>
+                <div class="tool-category">
+                    <div class="tool-category-title">MOVE CURSOR (10.8.2)</div>
+                    <button class="tool-btn" onclick="addBlock('F5')">Move Forward N <span class="tool-code">F5</span></button>
+                    <button class="tool-btn" onclick="addBlock('F6')">Move Backward N <span class="tool-code">F6</span></button>
+                    <button class="tool-btn" onclick="addBlock('F7')">Reset to Start <span class="tool-code">F7</span></button>
+                    <button class="tool-btn" onclick="addBlock('EA')">Move to End <span class="tool-code">EA</span></button>
+                </div>
+                <div class="tool-category">
+                    <div class="tool-category-title">SEARCH & REPLACE (10.8.3/4)</div>
+                    <button class="tool-btn" onclick="addBlock('B0')">Search String (Fwd) <span class="tool-code">B0</span></button>
+					<button class="tool-btn" onclick="addBlock('B1')">Search String (Back) <span class="tool-code">B1</span></button>
+					<button class="tool-btn" onclick="addBlock('E6')">Search Non-Match (Fwd) <span class="tool-code">E6</span></button>
+					<button class="tool-btn" onclick="addBlock('E7')">Search Non-Match (Back) <span class="tool-code">E7</span></button>
+                    <button class="tool-btn" onclick="addBlock('F8')">Search Char (Fwd) <span class="tool-code">F8</span></button>
+					<button class="tool-btn" onclick="addBlock('F9')">Search Char (Back) <span class="tool-code">F9</span></button>
+                    <button class="tool-btn" onclick="addBlock('FB')">Suppress/Remove Chars <span class="tool-code">FB</span></button>
+					<button class="tool-btn" onclick="addBlock('E4')">Replace Chars <span class="tool-code">E4</span></button>
+                    <button class="tool-btn" onclick="addBlock('BA')">Replace String <span class="tool-code">BA</span></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Workflow -->
+        <div class="panel">
+            <h2>Formatting Sequence</h2>
+            <div id="workflowArea" class="workflow-area">
+                <div style="text-align: center; color: #999; margin-top: 50px; font-style: italic;">
+                    Drag commands here or click to add.<br>
+                    The logic executes from top to bottom.
+                </div>
+            </div>
+        </div>
+
+        <!-- Live Preview -->
+        <div class="panel" style="overflow-y: auto;">
+            <h2>Live Preview</h2>
+            
+            <div class="test-input-area">
+                <label style="font-weight: bold; font-size: 0.9rem;">Test Barcode Data:</label>
+                <input type="text" id="testInput" value="1234567890ABCDEFGHIJ" 
+                       style="width: 100%; padding: 8px; margin-top: 5px; font-family: monospace; box-sizing: border-box;"
+                       oninput="updateSimulation()">
+            </div>
+
+            <div style="margin-bottom: 20px; flex-shrink: 0;">
+                <label style="font-weight: bold; font-size: 0.9rem;">Visual Cursor State:</label>
+                <div id="visualCursor" class="io-box"></div>
+                <small style="color: #666;">Cursor is shown as <span style="color:var(--cursor-color); font-weight:bold;">|</span></small>
+            </div>
+
+            <div style="margin-bottom: 20px; flex-shrink: 0;">
+                <label style="font-weight: bold; font-size: 0.9rem;">Final Output:</label>
+                <div id="finalOutput" class="io-box" style="color: #0ff;"></div>
+            </div>
+
+            <div class="final-command-box">
+                <h2 style="color: #856404; font-size: 0.8rem; margin-bottom: 5px;">Generated Command String</h2>
+                <div id="hexOutput" class="hex-string"></div>
+            </div>
+            
+            <!-- Bottom Action Buttons -->
+			<div class="action-buttons">
+				<a id="barcodeLink" href="#" target="_blank" title="Go to Generator" class="btn-generate">
+				    Generate &#8599;
+				</a>
+                <button onclick="resetAll()" class="btn-reset">Reset Flow</button>
+			</div>        
+		</div>
+    </div>
+
+    <script>
+        // --- AI GENERATION LOGIC ---
+        async function generateFormattingCommand() {
+            const promptText = document.getElementById('userInput').value;
+            const display = document.getElementById('resultDisplay');
+            
+            if (!promptText.trim()) return;
+
+            display.value = "Consulting AI...";
+
+            try {
+				const manualResponse = await fetch('https://wsaihopfsg.github.io/voi_formatter/data-formatter-cheatsheet.md');
+				const manualText = await manualResponse.text();
+                
+				const url = "https://gemini-ai-proxy.wsaiho.workers.dev";
+				const systemInstruction = "You are an expert programming assistant for industrial code scanners. " +
+				"Here is the strict syntax cheat sheet extracted from the device manual:\n\n" +
+				manualText + 
+				"\n\nTranslate the user's natural language request into the exact command string. " +
+				"Output ONLY the final command string.";				
+                
+				const response = await fetch(url, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+					    contents: [
+						    { parts: [{ text: systemInstruction + "\n\nUser Request: " + promptText }] }
+					    ],
+					    generationConfig: { temperature: 0.0 }
+					})
+				});
+				const data = await response.json();
+
+				if (!response.ok) {
+					throw new Error(data.error.message || "Unknown API Error");
+				}
+
+				const generatedCommand = data.candidates[0].content.parts[0].text.trim();
+				display.value = generatedCommand;
+
+                // --- REVERSE PARSE AI HEX TO GUI BLOCKS ---
+                try {
+                    parseCommandString(generatedCommand);
+                } catch (e) {
+                    console.warn("Could not completely parse AI output to blocks: ", e);
+                }
+
+				window.parent.postMessage(generatedCommand, "*");
+
+            } catch (error) {
+                display.value = "Error: " + error.message;
+            }
+        }
+
+        // --- SIMULATION & GUI BUILDER LOGIC ---
+        let workflow = [];
+        
+        const COMMANDS = {
+            'F1': { name: 'Send All Characters', inputs: [{name: 'suffix', type: 'char', label: 'Insert After (Suffix)', default: 'CR'}], desc: 'Send from cursor to end + suffix' },
+            'F2': { name: 'Send N Characters', inputs: [{name: 'count', type: 'number', label: 'Count (00-99)', default: 10}, {name: 'suffix', type: 'char', label: 'Insert After', default: 'CR'}], desc: 'Send N chars from cursor + suffix' },
+			'F3': { name: 'Send Up To Char', inputs: [{name: 'char', type: 'text', label: 'Stop at Char', default: '', maxLength: 1}, {name: 'suffix', type: 'char', label: 'Insert After', default: 'CR'}], desc: 'Send from cursor up to char ss' },
+            'E9': { name: 'Send All Except Last N', inputs: [{name: 'count', type: 'number', label: 'Skip Last N', default: 0}], desc: 'Send all but last N chars' },
+            'B3': { name: 'Insert Symbology Name', inputs: [], desc: 'Inserts e.g., "Code128"' },
+			'B4': { name: 'Insert Barcode Length', inputs: [], desc: 'Inserts length (e.g. "20")' },
+			'F4': { name: 'Insert Char N Times', inputs: [{name: 'char', type: 'text', label: 'Character', default: '', maxLength: 1}, {name: 'count', type: 'number', label: 'Times', default: 1}], desc: 'Insert character xx, nn times' },
+            'F5': { name: 'Move Cursor Forward', inputs: [{name: 'count', type: 'number', label: 'Steps', default: 1}], desc: 'Skip N characters' },
+            'F6': { name: 'Move Cursor Back', inputs: [{name: 'count', type: 'number', label: 'Steps', default: 1}], desc: 'Go back N characters' },
+            'F7': { name: 'Reset Cursor to Start', inputs: [], desc: 'Move to index 0' },
+            'EA': { name: 'Move Cursor to End', inputs: [], desc: 'Move to last index' },
+            'B0': { name: 'Search String (Forward)', inputs: [{name: 'searchStr', type: 'text', label: 'Find String', default: 'ABC'}], desc: 'Finds string, moves cursor to it' },
+			'B1': { name: 'Search String (Back)', inputs: [{name: 'searchStr', type: 'text', label: 'Find String', default: 'ABC'}], desc: 'Search backward for string' },
+			'E6': { name: 'Search Non-Match (Fwd)', inputs: [{name: 'char', type: 'text', label: 'Skip Char', default: '', maxLength: 1}], desc: 'Finds first character that is NOT this char' },
+			'E7': { name: 'Search Non-Match (Back)', inputs: [{name: 'char', type: 'text', label: 'Skip Char', default: '', maxLength: 1}], desc: 'Finds first character backward that is NOT this char' },
+            'F8': { name: 'Search Char (Forward)', inputs: [{name: 'char', type: 'text', label: 'Find Char', default: ''}], desc: 'Finds char, moves cursor to it' },
+			'F9': { name: 'Search Char (Back)', inputs: [{name: 'char', type: 'text', label: 'Find Char', default: ''}], desc: 'Search backward for char' },
+            'FB': { name: 'Suppress Characters', inputs: [{name: 'char', type: 'text', label: 'Remove Char', default: '', maxLength: 15}], desc: 'Removes specific char from output' },
+			'E4': { name: 'Map/Replace Chars', inputs: [{name: 'find', type: 'text', label: 'Find Chars (f1..)', default: 'abc', maxLength: 15}, {name: 'replace', type: 'text', label: 'Replace With (r1..)', default: '123', maxLength: 15}], desc: 'Maps char f1 to r1, f2 to r2, etc.' },
+			'BA': { name: 'Replace String', inputs: [{name: 'count', type: 'number', label: 'Count (00=All)', default: 0}, {name: 'find', type: 'text', label: 'Find', default: '23'}, {name: 'replace', type: 'text', label: 'Replace With', default: 'ABC'}], desc: 'Replaces occurrences of string' }
+        };
+
+        function toHex(val) {
+            if (val === 'CR') return '0D';
+            if (val === 'Tab') return '09';
+            if (val === 'LF') return '0A';
+			if (val === 'NUL') return '00';
+            if (val === 'None') return ''; 
+            if (val.length === 1) return val.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0');
+            return '';
+        }
+
+        function numToHexByte(num) {
+            let n = parseInt(num);
+            if (isNaN(n)) return '00';
+            return n.toString(10).padStart(2, '0');
+        }
+
+        function strToHex(str) {
+            let hex = '';
+            for(let i=0; i<str.length; i++) {
+                hex += str.charCodeAt(i).toString(16).toUpperCase();
+            }
+            return hex;
+        }
+
+        // --- HEX TO GUI DECODER ENGINE ---
+        function parseCommandString(hexStr) {
+            workflow = []; 
+            let i = 0;
+            hexStr = hexStr.toUpperCase().replace(/\s/g, ''); 
+
+            const getHex = (len) => {
+                if (i + len > hexStr.length) throw new Error("Unexpected end of string");
+                const res = hexStr.substr(i, len);
+                i += len;
+                return res;
+            };
+            const hexToChar = (hx) => String.fromCharCode(parseInt(hx, 16));
+            
+            const getSuffix = (hx) => {
+                if (hx === '0D') return 'CR';
+                if (hx === '09') return 'Tab';
+                if (hx === '0A') return 'LF';
+                if (hx === '00') return 'NUL';
+                if (hx === '20') return ' ';
+                return hexToChar(hx);
+            };
+
+            while (i < hexStr.length) {
+                let cmdId = getHex(2);
+                if (!COMMANDS[cmdId]) {
+                    console.warn("Unknown command " + cmdId);
+                    break;
+                }
+
+                let block = { id: Date.now() + i, cmdId: cmdId, ...COMMANDS[cmdId], values: {} };
+                block.inputs.forEach(inp => block.values[inp.name] = inp.default);
+
+                if (cmdId === 'F1') {
+                    block.values.suffix = getSuffix(getHex(2));
+                } else if (cmdId === 'F2') {
+                    block.values.count = parseInt(getHex(2), 10);
+                    block.values.suffix = getSuffix(getHex(2));
+                } else if (cmdId === 'F3') {
+                    block.values.char = hexToChar(getHex(2));
+                    block.values.suffix = getSuffix(getHex(2));
+                } else if (cmdId === 'E9' || cmdId === 'F5' || cmdId === 'F6') {
+                    block.values.count = parseInt(getHex(2), 10);
+                } else if (cmdId === 'F4') {
+                    block.values.char = getSuffix(getHex(2)); 
+                    block.values.count = parseInt(getHex(2), 10);
+                } else if (cmdId === 'B0' || cmdId === 'B1') {
+                    let len = parseInt(getHex(4), 10);
+                    let strHex = getHex(len * 2);
+                    let str = "";
+                    for(let j=0; j<strHex.length; j+=2) str += hexToChar(strHex.substr(j,2));
+                    block.values.searchStr = str;
+                } else if (cmdId === 'BA') {
+                    block.values.count = parseInt(getHex(2), 10);
+                    let fLen = parseInt(getHex(2), 10);
+                    let fStrHex = getHex(fLen * 2);
+                    let fStr = "";
+                    for(let j=0; j<fLen*2; j+=2) fStr += hexToChar(fStrHex.substr(j,2));
+                    block.values.find = fStr;
+
+                    let rLen = parseInt(getHex(2), 10);
+                    let rStr = "";
+                    if(rLen > 0) {
+                        let rStrHex = getHex(rLen * 2);
+                        for(let j=0; j<rLen*2; j+=2) rStr += hexToChar(rStrHex.substr(j,2));
+                    }
+                    block.values.replace = rStr;
+                } else if (cmdId === 'E6' || cmdId === 'E7' || cmdId === 'F8' || cmdId === 'F9') {
+                    block.values.char = hexToChar(getHex(2));
+                } else if (cmdId === 'FB') {
+                    getHex(2); // Skip hardcoded 01 length
+                    block.values.char = hexToChar(getHex(2));
+                } else if (cmdId === 'E4') {
+                    let totalLen = parseInt(getHex(2), 10);
+                    let mapHex = getHex(totalLen * 2); 
+                    let fStr = "", rStr = "";
+                    for(let j=0; j<mapHex.length; j+=4) {
+                        fStr += hexToChar(mapHex.substr(j,2));
+                        rStr += hexToChar(mapHex.substr(j+2,2));
+                    }
+                    block.values.find = fStr;
+                    block.values.replace = rStr;
+                }
+
+                workflow.push(block);
+            }
+            renderBlocks();
+            updateSimulation();
+        }
+
+        function addBlock(cmdId) {
+            const id = Date.now();
+            const config = { ...COMMANDS[cmdId] };
+            config.values = {};
+            config.inputs.forEach(inp => config.values[inp.name] = inp.default);
+            workflow.push({ id, cmdId, ...config });
+            renderBlocks();
+            updateSimulation();
+        }
+
+        function removeBlock(id) {
+            workflow = workflow.filter(b => b.id !== id);
+            renderBlocks();
+            updateSimulation();
+        }
+
+        function updateValue(id, field, value) {
+            const block = workflow.find(b => b.id === id);
+            if(block) {
+                block.values[field] = value;
+                updateSimulation(); 
+            }
+        }
+
+        function resetAll() {
+            workflow = [];
+            renderBlocks();
+            updateSimulation();
+        }
+
+        function renderBlocks() {
+            const area = document.getElementById('workflowArea');
+            area.innerHTML = '';
+            
+            if(workflow.length === 0) {
+                area.innerHTML = '<div style="text-align: center; color: #999; margin-top: 50px; font-style: italic;">Drag commands here or click to add.<br>The logic executes from top to bottom.</div>';
+                return;
+            }
+
+            workflow.forEach((block, index) => {
+                const el = document.createElement('div');
+                el.className = 'flow-block';
+                
+                let inputsHtml = '';
+                block.inputs.forEach(inp => {
+                    let inputControl = '';
+                    if(inp.type === 'number') {
+                        inputControl = `<input type="number" value="${block.values[inp.name]}" onchange="updateValue(${block.id}, '${inp.name}', this.value)" style="width: 60px;">`;
+                    } else if (inp.type === 'char') {
+                        const val = block.values[inp.name];
+                        const predefined = ['None', 'CR', 'LF', 'Tab', 'D', ' ', 'NUL'];
+                        let customOption = '';
+                        if (!predefined.includes(val)) {
+                            customOption = `<option value="${val}" selected>Custom: ${val}</option>`;
+                        }
+
+                        inputControl = `
+                        <select onchange="updateValue(${block.id}, '${inp.name}', this.value)">
+                            <option value="None" ${val === 'None' ? 'selected' : ''}>None</option>
+                            <option value="CR" ${val === 'CR' ? 'selected' : ''}>&lt;CR&gt;</option>
+							<option value="LF" ${val === 'LF' ? 'selected' : ''}>&lt;LF&gt; (0x0A)</option>
+                            <option value="Tab" ${val === 'Tab' ? 'selected' : ''}>&lt;Tab&gt;</option>
+                            <option value="D" ${val === 'D' ? 'selected' : ''}>D</option>
+                            <option value=" " ${val === ' ' ? 'selected' : ''}>Space</option>
+							<option value="NUL" ${val === 'NUL' ? 'selected' : ''}>&lt;NUL&gt; (0x00)</option>
+                            ${customOption}
+                        </select>`;
+                    } else {
+                        const limit = inp.maxLength ? `maxlength="${inp.maxLength}"` : '';
+                        inputControl = `<input type="text" ${limit} value="${block.values[inp.name]}" onchange="updateValue(${block.id}, '${inp.name}', this.value)" style="width: 100px;">`;
+                    }
+
+                    inputsHtml += `
+                        <div class="input-group">
+                            <label>${inp.label}</label>
+                            ${inputControl}
+                        </div>
+                    `;
+                });
+
+                el.innerHTML = `
+                    <div class="flow-block-header">
+                        <span>${index + 1}. ${block.name} <span style="color:#999; font-weight:normal; font-size:0.8em">(${block.cmdId})</span></span>
+                        <span class="remove-btn" onclick="removeBlock(${block.id})">&times;</span>
+                    </div>
+                    <div class="flow-inputs">${inputsHtml}</div>
+                    <div style="font-size: 0.75rem; color: #888; margin-top: 5px;">${block.desc}</div>
+                `;
+                area.appendChild(el);
+            });
+        }
+
+        function updateSimulation() {
+			let inputStr = document.getElementById('testInput').value;
+            let cursor = 0;
+            let output = "";
+            let hexCmd = "";
+
+            workflow.forEach(step => {
+                const v = step.values;
+                let stepHex = step.cmdId;
+                
+                if (step.cmdId === 'F1') {
+                    const suffixHex = v.suffix === 'None' ? '' : toHex(v.suffix);
+                    stepHex += suffixHex;
+                    output += inputStr.substring(cursor);
+                    if(v.suffix === 'CR') output += '<CR>';
+                    else if(v.suffix === 'Tab') output += '<Tab>';
+					else if(v.suffix === 'LF') output += '<LF>';
+					else if(v.suffix === 'NUL') output += '<NUL>';
+                    else if(v.suffix !== 'None') output += v.suffix;
+                    cursor = inputStr.length;
+                }
+                else if (step.cmdId === 'F2') {
+                    const count = parseInt(v.count);
+                    const suffixHex = v.suffix === 'None' ? '' : toHex(v.suffix);
+                    stepHex += numToHexByte(count) + suffixHex;
+                    const chunk = inputStr.substr(cursor, count);
+                    output += chunk;
+                    if(v.suffix === 'CR') output += '<CR>';
+					else if(v.suffix === 'Tab') output += '<Tab>';
+					else if(v.suffix === 'LF') output += '<LF>';
+					else if(v.suffix === 'NUL') output += '<NUL>';
+                    else if(v.suffix !== 'None') output += v.suffix;
+                    cursor += chunk.length;
+                }
+                else if (step.cmdId === 'F5') {
+                    const count = parseInt(v.count);
+                    stepHex += numToHexByte(count);
+                    cursor = Math.min(inputStr.length, cursor + count);
+                }
+                else if (step.cmdId === 'F7') {
+                    cursor = 0;
+                }
+				else if (step.cmdId === 'B0') {
+                    const sLen = v.searchStr.length;
+                    const lenHex = sLen.toString().padStart(4, '0'); 
+                    const strHex = strToHex(v.searchStr);
+                    stepHex += lenHex + strHex;
+                    const foundIdx = inputStr.indexOf(v.searchStr, cursor);
+                    if(foundIdx !== -1) { cursor = foundIdx; } 
+                    else { output = "Error: Search string not found."; cursor = inputStr.length; }
+                }                
+				else if (step.cmdId === 'B1') {
+                    const sLen = v.searchStr.length;
+                    const lenHex = sLen.toString().padStart(4, '0'); 
+                    const strHex = strToHex(v.searchStr);
+                    stepHex += lenHex + strHex;
+                    if (v.searchStr.length > 0) {
+                        const foundIdx = inputStr.lastIndexOf(v.searchStr, cursor);
+                        if(foundIdx !== -1) { cursor = foundIdx; } 
+                        else { output = "Error: Search string not found."; cursor = inputStr.length; }
+                    }
+                }
+				else if (step.cmdId === 'BA') {
+                     const countVal = parseInt(v.count);
+                     const nn = isNaN(countVal) ? 0 : countVal; 
+                     const findLen = v.find.length.toString().padStart(2,'0');
+                     const replLen = v.replace.length.toString().padStart(2,'0');
+                     stepHex += numToHexByte(nn) + findLen + strToHex(v.find) + replLen + strToHex(v.replace);
+                     if (v.find.length > 0) {
+                         const preCursor = inputStr.substring(0, cursor);
+                         let postCursor = inputStr.substring(cursor);
+                         if (nn === 0) {
+                             postCursor = postCursor.split(v.find).join(v.replace);
+                         } else {
+                             for(let i = 0; i < nn; i++) {
+                                 postCursor = postCursor.replace(v.find, v.replace);
+                             }
+                         }
+                         inputStr = preCursor + postCursor;
+                     }
+                }
+				else if (step.cmdId === 'EA') {
+                    cursor = inputStr.length;
+                }
+                else if (step.cmdId === 'F6') {
+                    const count = parseInt(v.count);
+                    stepHex += numToHexByte(count);
+                    cursor = Math.max(0, cursor - count-1);
+                }
+                else if (step.cmdId === 'F8') {
+                    stepHex += toHex(v.char); 
+                    if (v.char.length === 1) {
+                        const foundIdx = inputStr.indexOf(v.char, cursor);
+                        if(foundIdx !== -1) cursor = foundIdx; 
+                    }
+                }
+				else if (step.cmdId === 'F9') {
+                    stepHex += toHex(v.char); 
+                    if (v.char.length === 1) {
+                        const foundIdx = inputStr.lastIndexOf(v.char, cursor);
+                        if(foundIdx !== -1) cursor = foundIdx; 
+                    }
+                }
+				else if (step.cmdId === 'E9') {
+                    const count = parseInt(v.count);
+                    stepHex += numToHexByte(count);
+                    const remainingLen = inputStr.length - cursor;
+                    const sendLen = Math.max(0, remainingLen - count);
+                    output += inputStr.substr(cursor, sendLen);
+                    cursor += sendLen;
+                }
+                else if (step.cmdId === 'F4') {
+                    const count = parseInt(v.count);
+                    stepHex += toHex(v.char) + numToHexByte(count);
+                    let visualChar = v.char;
+                    if(v.char === 'CR') visualChar = '<CR>';
+                    else if(v.char === 'Tab') visualChar = '<Tab>';
+                    else if(v.char === 'LF') visualChar = '<LF>';
+                    else if(v.char === 'NUL') visualChar = '<NUL>';
+                    else if(v.char === 'None') visualChar = '';
+                    for(let i=0; i<count; i++) { output += visualChar; }
+                }
+				else if (step.cmdId === 'F3') {
+                    stepHex += toHex(v.char) + toHex(v.suffix);
+                    const searchChar = v.char;
+                    if (searchChar.length > 0) {
+                        const foundIdx = inputStr.indexOf(searchChar, cursor);
+                        if (foundIdx !== -1) {
+                            const chunk = inputStr.substring(cursor, foundIdx);
+                            output += chunk;
+                            cursor = foundIdx;
+                        }
+                    }
+                    let visualSuffix = v.suffix;
+                    if(v.suffix === 'CR') visualSuffix = '<CR>';
+                    else if(v.suffix === 'Tab') visualSuffix = '<Tab>';
+                    else if(v.suffix === 'LF') visualSuffix = '<LF>';
+                    else if(v.suffix === 'NUL') visualSuffix = '<NUL>';
+                    else if(v.suffix === 'None') visualSuffix = '';
+                    output += visualSuffix;
+                }		
+				else if (step.cmdId === 'FB') {
+                    const charToRemove = v.char;
+                    stepHex += "01" + toHex(charToRemove);
+                    if (charToRemove.length > 0) {
+                        const preCursor = inputStr.substring(0, cursor);
+                        const postCursor = inputStr.substring(cursor);
+                        const cleanedPost = postCursor.split(charToRemove).join('');
+                        inputStr = preCursor + cleanedPost;
+                    }
+                }		
+                else if (step.cmdId === 'E6') {
+                    stepHex += toHex(v.char); 
+                    if (v.char.length === 1) {
+                        for(let i = cursor; i < inputStr.length; i++) {
+                            if (inputStr[i] !== v.char) { cursor = i; break; }
+                        }
+                    }
+                }
+				else if (step.cmdId === 'E7') {
+                    stepHex += toHex(v.char); 
+                    if (v.char.length === 1) {
+                        for(let i = cursor; i >= 0; i--) {
+                            if (inputStr[i] !== v.char) { cursor = i; break; }
+                        }
+                    }
+                }
+                else if (step.cmdId === 'E4') {
+                    let fStr = v.find;
+                    let rStr = v.replace;
+                    const len = Math.min(fStr.length, rStr.length);
+                    const nn = len * 2; 
+                    let mapHex = "";
+                    for(let i=0; i<len; i++) { mapHex += toHex(fStr[i]) + toHex(rStr[i]); }
+                    stepHex += numToHexByte(nn) + mapHex;
+                    if (len > 0) {
+                        const preCursor = inputStr.substring(0, cursor);
+                        const postCursor = inputStr.substring(cursor);
+                        const mappedPost = postCursor.split('').map(char => {
+                            const idx = fStr.substring(0, len).indexOf(char);
+                            return (idx !== -1) ? rStr[idx] : char;
+                        }).join('');
+                        inputStr = preCursor + mappedPost;
+                    }
+                }
+				else if (step.cmdId === 'B4') {
+                    output += inputStr.length.toString();
+                }				
+
+                hexCmd += stepHex;
+            });
+
+            document.getElementById('hexOutput').textContent = hexCmd || "Add blocks to generate code...";
+            document.getElementById('finalOutput').textContent = output || "(Empty)";
+
+            const preCursor = inputStr.substring(0, cursor);
+            const postCursor = inputStr.substring(cursor);
+            document.getElementById('visualCursor').innerHTML = 
+                escapeHtml(preCursor) + '<span class="cursor-marker"></span>' + escapeHtml(postCursor);
+            
+            const baseUrl = "https://barcode.tec-it.com/en/?data=%5C<FNC3>%40DFMADD"
+            const linkEl = document.getElementById('barcodeLink');
+            if(linkEl) {
+                linkEl.href = baseUrl + "0" + "69999999999" + (hexCmd || "");
+            }
+        }
+
+        function escapeHtml(text) {
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // On Page Load
+        window.addEventListener('DOMContentLoaded', (event) => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const initialCode = urlParams.get('code');
+            if (initialCode) document.getElementById('testInput').value = initialCode;
+            updateSimulation();
+        });
+
+    </script>
+</body>
+</html>
