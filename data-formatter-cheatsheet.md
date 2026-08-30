@@ -30,7 +30,7 @@ Data Formatter commands manipulate a **virtual cursor** along the scanned barcod
 *   **`F2nnxx`** — **Send a Number of Characters**
     *   *Description:* Sends `nn` characters starting from the current cursor position, followed by the insert character `xx`. If the end of the data is reached before `nn` characters, it stops sending data and inserts `xx`.
     *   *Syntax:* `F2nnxx` (`nn` = decimal 00-99, `xx` = insert character hex; 00 is End-of-string filler, no-op separator and the cursor stops here).
-	* 	*Example:* Send first 10 characters from the barcode above, followed by a carriage return.
+	* 	*Example:* Send first 10 characters, followed by a carriage return.
 	*   *F2100D*
 	*   *F2*: “Send a number of characters” command
 	*   *10*: Send 10 charcters
