@@ -26,26 +26,94 @@
             flex-direction: column;
         }
 
-        h1 { font-size: 1.2rem; margin-bottom: 10px; color: var(--accent); }
+        
         h2 { font-size: 1rem; margin-top: 0; color: #666; text-transform: uppercase; letter-spacing: 0.05em; }
 
+        /* Main Grid Layout */
+        .container {
+            display: grid;
+            /* 3 Columns: Toolbox(250px) | Sequence(1fr) | Preview(300px) */
+            grid-template-columns: 250px 1fr 300px;
+            /* 2 Rows: AI Section(auto height) | Panels(remaining space) */
+            grid-template-rows: auto 1fr;
+            gap: 20px;
+            flex: 1;
+            min-height: 0; 
+        }
+
+
         /* AI Top Section */
-        .ai-section { margin-bottom: 20px; }
-        .ai-input-group { display: flex; gap: 10px; align-items: flex-start; }
+        .ai-section {
+            grid-column: 1 / 3; /* Spans across Toolbox and Formatting Sequence */
+            grid-row: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .ai-title {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: var(--accent);
+            margin: 0 0 10px 0;
+        }
+        .ai-input-group {
+            display: flex;
+            gap: 10px;
+            height: 70px; /* Shortened input window */
+        }
         .ai-textarea {
-            flex: 1; height: 60px; padding: 10px; font-family: monospace;
-            border: 1px solid #ccc; border-radius: 4px; resize: vertical;
+            flex: 1;
+            padding: 10px;
+            font-family: monospace;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            resize: none;
+            box-sizing: border-box;
         }
-        .ai-controls { display: flex; flex-direction: column; gap: 5px; width: 250px; }
+        .ai-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            width: 220px;
+        }
+        .ai-btn-row {
+            display: flex;
+            gap: 5px;
+            flex: 1;
+        }
+
         .btn-ai {
-            background: #00a587; color: white; border: none; padding: 10px;
-            border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 1rem;
-            transition: background 0.2s;
+            flex: 1;
+            background: #00a587;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: opacity 0.2s;
         }
-        .btn-ai:hover { background: #008f73; }
+        .btn-ai:hover { opacity: 0.9; }
+        .btn-cancel {
+            flex: 1;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .btn-cancel:hover { opacity: 0.9; }
+
         .ai-output-box {
-            padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-family: monospace;
-            background: #fff; color: #333; box-sizing: border-box;
+            flex: 1;
+            padding: 4px 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: #666;
+            background: #fff;
+            box-sizing: border-box;
         }
 
         /* Main Grid Layout */
@@ -56,13 +124,23 @@
 
         /* Common Panel Styles */
         .panel {
-            background: var(--panel-bg); border: 1px solid var(--border); border-radius: 8px;
-            padding: 15px; display: flex; flex-direction: column; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            background: var(--panel-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
             overflow: hidden;
         }
 
-        /* TOOLBOX (Left) */
-        .toolbox-list { overflow-y: auto; flex: 1; }
+        /* GRID ASSIGNMENTS */
+        .panel-toolbox { grid-column: 1; grid-row: 2; }
+        .panel-workflow { grid-column: 2; grid-row: 2; }
+        .panel-preview { grid-column: 3; grid-row: 1 / 3; overflow-y: auto; } /* Spans full right side */
+
+        /* TOOLBOX */
+        .toolbox-list { overflow-y: auto; flex: 1; padding-right: 5px; }
         .tool-category { margin-bottom: 15px; }
         .tool-category-title {
             font-size: 0.85rem; font-weight: bold; color: #888; margin-bottom: 8px;
@@ -76,7 +154,7 @@
         .tool-btn:hover { background: #eef2f5; border-color: var(--primary); transform: translateX(2px); }
         .tool-code { float: right; font-family: monospace; color: #999; font-size: 0.8em; }
 
-        /* WORKFLOW (Center) */
+        /* WORKFLOW */
         .workflow-area {
             background: #fafafa; border: 2px dashed #ddd; flex: 1; overflow-y: auto;
             padding: 10px; border-radius: 6px;
@@ -95,7 +173,7 @@
         .input-group label { font-size: 0.75rem; color: #666; margin-bottom: 2px; }
         .input-group input, .input-group select { padding: 5px; border: 1px solid #ddd; border-radius: 3px; font-family: monospace; }
         
-        /* PREVIEW & OUTPUT (Right) */
+        /* PREVIEW & OUTPUT */
         .test-input-area { margin-bottom: 20px; flex-shrink: 0; }
         .io-box {
             font-family: 'Courier New', monospace; background: #222; color: #0f0; padding: 10px;
@@ -117,12 +195,12 @@
         /* Bottom Action Buttons */
         .action-buttons { display: flex; gap: 10px; margin-top: 15px; flex-shrink: 0; }
         .btn-generate {
-            flex: 1; background: var(--primary); color: white; text-decoration: none; font-weight: bold;
-            font-size: 1rem; padding: 12px; border-radius: 4px; text-align: center; display: flex;
-            justify-content: center; align-items: center; gap: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            transition: opacity 0.2s; box-sizing: border-box; border: none; cursor: pointer;
+        .btn-generate-bottom {
+            flex: 1; background: var(--primary); color: white; border: none; font-weight: bold;
+            font-size: 1rem; padding: 12px; border-radius: 4px; cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: opacity 0.2s; box-sizing: border-box;
         }
-        .btn-generate:hover { opacity: 0.9; }
+        .btn-generate-bottom:hover { opacity: 0.9; }
         .btn-reset {
             flex: 1; padding: 12px; background: #e74c3c; color: white; border: none; border-radius: 4px;
             cursor: pointer; font-weight: bold; font-size: 1rem; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
@@ -134,20 +212,27 @@
 </head>
 <body>
 
-    <!-- AI Top Section -->
-    <div class="ai-section">
-        <h1>AI Data Formatting Assistant</h1>
-        <div class="ai-input-group">
-            <textarea id="userInput" class="ai-textarea" placeholder="e.g., Send the first 3 characters and follow it with a NUL character"></textarea>
-            <div class="ai-controls">
-                <button onclick="generateFormattingCommand()" class="btn-ai">AI Generate!</button>
-                <input type="text" id="resultDisplay" class="ai-output-box" readonly placeholder="Resulting command..." />
-            </div>
-        </div>
-    </div>
-
     <!-- Main Builder Container -->
     <div class="container">
+        
+        <!-- AI Section (Spans Top Left & Center) -->
+        <div class="ai-section">
+            <h2 class="ai-title">AI Data Formatting Assistant</h2>
+            <div class="ai-input-group">
+                <textarea id="userInput" class="ai-textarea" placeholder="e.g., Send the first 3 characters and follow it with a NUL character"></textarea>
+                <div class="ai-controls">
+                    <div class="ai-btn-row">
+                        <button onclick="generateFormattingCommand()" class="btn-ai">AI Generate</button>
+                        <button onclick="cancelAndGoBack()" class="btn-cancel">Cancel</button>
+                    </div>
+                    <input type="text" id="resultDisplay" class="ai-output-box" readonly placeholder="Resulting command..." />
+                </div>
+            </div>
+        </div>
+    
+
+        <!-- Toolbox (Bottom Left) -->
+        <div class="panel panel-toolbox">
         <!-- Toolbox -->
         <div class="panel">
             <h2>Command Toolbox</h2>
@@ -184,8 +269,8 @@
             </div>
         </div>
 
-        <!-- Workflow -->
-        <div class="panel">
+        <!-- Workflow (Bottom Center) -->
+        <div class="panel panel-workflow">
             <h2>Formatting Sequence</h2>
             <div id="workflowArea" class="workflow-area">
                 <div style="text-align: center; color: #999; margin-top: 50px; font-style: italic;">
@@ -195,8 +280,9 @@
             </div>
         </div>
 
-        <!-- Live Preview -->
-        <div class="panel" style="overflow-y: auto;">
+        <!-- Live Preview (Spans Full Right Side) -->
+        <div class="panel panel-preview">
+            
             <div class="test-input-area">
                 <label style="font-weight: bold; font-size: 0.9rem;">Test Barcode Data:</label>
                 <input type="text" id="testInput" value="1234567890ABCDEFGHIJ" 
@@ -222,9 +308,8 @@
             
             <!-- Bottom Action Buttons -->
 			<div class="action-buttons">
-                <!-- Replaced the anchor tag link with a button to send the postMessage to Node-RED -->
-                <button onclick="sendCodeToNodeRed()" class="btn-generate">
-                    Generate
+                <button onclick="sendCodeToNodeRed()" class="btn-generate-bottom">
+                    Send to VOI
                 </button>
                 <button onclick="resetAll()" class="btn-reset">Reset Flow</button>
 			</div>        
@@ -283,7 +368,13 @@
             }
         }
 
-        // Send generated string to parent Node-RED Dashboard
+        // --- BUTTON ACTIONS ---
+        function cancelAndGoBack() {
+            // Sends a unique string to the Vue parent to close the iframe without sending scanner commands
+            window.parent.postMessage('CANCEL_FORMATTER', '*');
+        }
+
+
         function sendCodeToNodeRed() {
             const hexCmd = document.getElementById('hexOutput').textContent;
             if (hexCmd && hexCmd !== "Add blocks to generate code...") {
