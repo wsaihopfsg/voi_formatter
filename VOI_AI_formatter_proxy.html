@@ -120,7 +120,7 @@
             flex: 1; background: var(--primary); color: white; text-decoration: none; font-weight: bold;
             font-size: 1rem; padding: 12px; border-radius: 4px; text-align: center; display: flex;
             justify-content: center; align-items: center; gap: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            transition: opacity 0.2s; box-sizing: border-box;
+            transition: opacity 0.2s; box-sizing: border-box; border: none; cursor: pointer;
         }
         .btn-generate:hover { opacity: 0.9; }
         .btn-reset {
@@ -197,8 +197,6 @@
 
         <!-- Live Preview -->
         <div class="panel" style="overflow-y: auto;">
-            <h2>Live Preview</h2>
-            
             <div class="test-input-area">
                 <label style="font-weight: bold; font-size: 0.9rem;">Test Barcode Data:</label>
                 <input type="text" id="testInput" value="1234567890ABCDEFGHIJ" 
@@ -224,9 +222,10 @@
             
             <!-- Bottom Action Buttons -->
 			<div class="action-buttons">
-				<a id="barcodeLink" href="#" target="_blank" title="Go to Generator" class="btn-generate">
-				    Generate &#8599;
-				</a>
+                <!-- Replaced the anchor tag link with a button to send the postMessage to Node-RED -->
+                <button onclick="sendCodeToNodeRed()" class="btn-generate">
+                    Generate
+                </button>
                 <button onclick="resetAll()" class="btn-reset">Reset Flow</button>
 			</div>        
 		</div>
@@ -279,10 +278,16 @@
                     console.warn("Could not completely parse AI output to blocks: ", e);
                 }
 
-				//window.parent.postMessage(generatedCommand, "*");
-
             } catch (error) {
                 display.value = "Error: " + error.message;
+            }
+        }
+
+        // Send generated string to parent Node-RED Dashboard
+        function sendCodeToNodeRed() {
+            const hexCmd = document.getElementById('hexOutput').textContent;
+            if (hexCmd && hexCmd !== "Add blocks to generate code...") {
+                window.parent.postMessage('DFMADD0' + hexCmd, '*');
             }
         }
 
@@ -718,11 +723,7 @@
             document.getElementById('visualCursor').innerHTML = 
                 escapeHtml(preCursor) + '<span class="cursor-marker"></span>' + escapeHtml(postCursor);
             
-            const baseUrl = "https://barcode.tec-it.com/en/?data=%5C<FNC3>%40DFMADD"
-            const linkEl = document.getElementById('barcodeLink');
-            if(linkEl) {
-                linkEl.href = baseUrl + "0" + "69999999999" + (hexCmd || "");
-            }
+            // Note: The external URL link execution has been removed as requested.
         }
 
         function escapeHtml(text) {
