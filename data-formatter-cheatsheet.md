@@ -102,7 +102,12 @@ Data Formatter commands manipulate a **virtual cursor** along the scanned barcod
 
 *   **`F6nn`** — **Move Cursor Backward**
     *   *Description:* Rewinds the virtual cursor back by `nn` characters.
-    *   *Syntax:* `F6nn` (`nn` = decimal offset 00-99).
+    *   *Syntax:* `F6nn` (`nn` = decimal offset 00-99). Note that the nn=(number of backward cursor moves - 1). Hence to move back 1 place, nn=0
+	*	*Example*: Move the cursor to End, and move cursor backward by 1
+	*	*EAF600*
+	*	*EA*: Move cursor to the end
+	*	*F6*: Move cursor backward
+	*	*00*: 1 place
 
 *   **`F7`** — **Move Cursor to Beginning**
     *   *Description:* Resets the virtual cursor to the first character of the scanned data.
