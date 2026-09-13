@@ -381,3 +381,14 @@ This section teaches an AI assistant how to write exact command strings using ch
 * F1: Send all
 * 00: <NUL>
 * Output: **456876789035bc8**
+
+10. Remove all occurrence of characters 8 & c **FB0138FB0163F100**
+* FB: Suppress Characters
+* 01: Number of characters to suppress
+* 38: ASCII for '8'
+* FB: Suppress Characters
+* 01: Number of characters to suppress
+* 63: ASCII for 'c'
+* F1: Send all
+* 00: <NUL>
+* Output: **ABde 123$45676%79035bc**
