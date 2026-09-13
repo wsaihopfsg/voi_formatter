@@ -391,4 +391,4 @@ This section teaches an AI assistant how to write exact command strings using ch
 * 63: ASCII for 'c'
 * F1: Send all
 * 00: <NUL>
-* Output: **ABde 123$45676%79035bc**
+* Output: **ABde 123$45676%79035b**
